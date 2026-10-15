@@ -20,7 +20,7 @@ void main() {
  float theta=.055+uv.y*(3.14159265359-.11);
  float phi=uv.x*6.28318530718;
  float phase=clock*.6;
- float deformation=mix(.025,(state>1.5 && state<2.5)?.095:(.035+.20*voice),openness);
+ float deformation=openness*((state>1.5 && state<2.5)?.095:(.035+.20*voice));
  float ripple=sin(theta*4.+phase*2.1)*cos(phi*3.-phase*1.3)+.4*sin(phi*5.+theta*3.+phase);
  vec3 v=vec3(sin(theta)*cos(phi),cos(theta),sin(theta)*sin(phi))*(1.+deformation*ripple);
  // A visible turn, including a gentle changing tilt, makes the small sphere
@@ -28,7 +28,7 @@ void main() {
  float angle=clock*.32;
  float x=v.x*cos(angle)+v.z*sin(angle);
  float z=-v.x*sin(angle)+v.z*cos(angle);
- float tilt=.24+.16*sin(clock*.24);
+ float tilt=.24+clock*.24;
  float y=v.y*cos(tilt)+z*sin(tilt);
  z=-v.y*sin(tilt)+z*cos(tilt);
  float scale=(16.+39.*openness)/(1.-z*.11);

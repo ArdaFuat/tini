@@ -75,6 +75,21 @@ class NativeOrbTests(unittest.TestCase):
         QTest.qWait(120)
         self.assertGreater(mesh.property('voice'),.2)
 
+    def test_expanded_orb_is_turquoise_until_speech_then_returns_after_silence(self):
+        self.orb.set_mode('recording')
+        QTest.qWait(450)
+        def is_pink():
+            frame=pixels(self.view.grabWindow()).astype(np.int64)
+            return frame[:,:,0].sum()>frame[:,:,1].sum()
+        self.assertFalse(is_pink())
+        for _ in range(6):
+            self.orb.set_level(.025)
+            QTest.qWait(60)
+        self.assertTrue(is_pink())
+        self.orb.set_level(0)
+        QTest.qWait(1400)
+        self.assertFalse(is_pink())
+
     def test_input_passes_through_visual_overlay_and_transparent_margin(self):
         self.orb.set_mode('idle')
         QTest.qWait(400)

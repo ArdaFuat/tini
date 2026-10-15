@@ -146,7 +146,7 @@ class Orb(QWidget):
     def set_mode(self, mode):
         self.mode = mode
         self.expansion_target = 0.0 if mode == 'idle' else 1.0
-        self.color_target = QColor({'idle':'#469caf', 'recording':'#e78faf',
+        self.color_target = QColor({'idle':'#469caf', 'recording':'#469caf',
                                     'processing':'#e6cc83', 'loading':'#91a3d4',
                                     'error':'#ef7988'}[mode])
         if mode != 'recording':
@@ -163,6 +163,11 @@ class Orb(QWidget):
         self.last_tick = now
         target = self.target if self.mode == 'recording' and now-self.last_audio < .18 else 0.
         self.level += (target-self.level)*(1-math.exp(-dt/(.045 if target > self.level else .38)))
+        if self.mode == 'recording':
+            blend=max(0.,min(1.,(self.level-.18)/.24))
+            quiet,talking=QColor('#469caf'),QColor('#e78faf')
+            self.color_target=QColor.fromRgbF(*[a+(b-a)*blend for a,b in zip(
+                quiet.getRgbF()[:3],talking.getRgbF()[:3])])
         self.expansion += (self.expansion_target-self.expansion)*(1-math.exp(-dt/.16))
         # Windows layered windows already hit-test their nonzero-alpha pixels.
         # The faint disk in draw() fills mesh gaps and grows with the orb.

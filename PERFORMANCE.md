@@ -26,15 +26,17 @@ Normal uygulamada bu yoğun kare günlükleri kapalıdır.
 
 GPU açık ve kapalı ek kontrollerde üç ses örneğinin toplam 18 çözümlemesi
 önceki referanslarla birebir aynı metni verdi. 27 otomatik kontrol ile ayrı
-çalıştırılan dört Windows/GPU kontrolü geçti. GPU kontrolleri gerçek piksellerde
+çalıştırılan beş Windows/GPU kontrolü geçti. GPU kontrolleri gerçek piksellerde
 hareket ve büyüme, ses tepkisi, tıklama geçirgenliği, iki monitör arasında taşıma
 ve görünürlüğün geri gelmesini kapsıyor.
 
-Küçük kürede seyrek ızgara korunuyor. Hareketin yalnızca parlaklık değişimi gibi
-görünmemesi için iki eksende dönüş belirginleştirildi; derinlik rengi bütün
-küreye yayıldı ve arka çizgiler görünür tutuldu. Konuşma tepkisinin hızlı
-yükselip yavaş sönmesi korundu. Bu son görsel ayar, yukarıdaki uzun yük
-denemelerinden sonra dört Windows/GPU kontrolüyle yeniden doğrulandı.
+Küçük kürede referans videodaki üçgen ağ korunuyor. Beklerken deformasyon ve
+derinliğe bağlı kararma yok; küre iki eksende sabit parlaklıkla dönüyor. Büyüyen
+küre de turkuaz kalıyor; pembe renk ses seviyesiyle beliriyor, sessizlikte geri
+çekiliyor. Konuşma tepkisinin hızlı yükselip yavaş sönmesi korundu. Bu son
+görsel ayar, yukarıdaki uzun yük denemelerinden sonra beş Windows/GPU kontrolüyle
+yeniden doğrulandı. Bunlardan biri gerçek render piksellerinde sessizlik →
+konuşma → sessizlik sırasında turkuaz → pembe → turkuaz geçişini denetliyor.
 
 ## Önceki animasyon: düzenli kare aralığı
 

@@ -24,11 +24,14 @@ float wire(vec2 grid, bool diagonals) {
  return 1.-smoothstep(.05*pixelRatio,.38*pixelRatio,distance);
 }
 void main() {
- float sparse=wire(uv*vec2(14.,7.),false);
+ float sparse=wire(uv*vec2(14.,7.),true);
  float detailed=wire(uv*vec2(34.,17.),true);
  float ink=mix(sparse,detailed,smoothstep(.05,.85,openness));
  // Keep rear lines visible and distribute shading over the whole sphere.
  // A narrow transition at depth zero looks like individual lights switching off.
- float alpha=mix(.32,.74,smoothstep(-.75,.75,depth))*ink*qt_Opacity;
- fragColor=vec4(vec3(tintR,tintG,tintB)*alpha,alpha);
+ float shading=mix(.62,mix(.32,.74,smoothstep(-.75,.75,depth)),openness);
+ float alpha=shading*ink*qt_Opacity;
+ float speaking=(state>.5 && state<1.5)?smoothstep(.18,.42,voice):0.;
+ vec3 tint=mix(vec3(tintR,tintG,tintB),vec3(.905882,.560784,.686275),speaking);
+ fragColor=vec4(tint*alpha,alpha);
 }
