@@ -32,6 +32,9 @@ namespace TiniSetup {
         void SetPath([MarshalAs(UnmanagedType.LPWStr)] string path);
     }
     public static class Shortcuts {
+        [DllImport("shell32.dll", CharSet=CharSet.Unicode)]
+        static extern void SHChangeNotify(uint change, uint flags,
+            [MarshalAs(UnmanagedType.LPWStr)] string path, IntPtr unused);
         public static void Create(string file, string target, string args, string root, string icon) {
             var link = (IShellLinkW)new ShellLink();
             try {
@@ -42,6 +45,7 @@ namespace TiniSetup {
                 link.SetDescription("Tını - Türkçe konuşarak yaz");
                 link.SetShowCmd(1);
                 ((IPersistFile)link).Save(file, true);
+                SHChangeNotify(0x2000, 0x0005, file, IntPtr.Zero);
             } finally { Marshal.FinalReleaseComObject(link); }
         }
     }
@@ -55,6 +59,6 @@ namespace TiniSetup {
             (Join-Path $folder 'Tını.lnk'),
             (Join-Path $Root '.venv\Scripts\pythonw.exe'),
             ('"' + (Join-Path $Root 'launcher.pyw') + '"'),
-            $Root, (Join-Path $Root 'assets\ses.ico'))
+            $Root, (Join-Path $Root 'assets\branding\tini.ico'))
     }
 }

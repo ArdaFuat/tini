@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/branding/tini-logo.svg" width="120" alt="Tını logosu"></p>
+
 # Tını
 
 Windows için yerel Türkçe dikte. Konuş, metnin seçtiğin alana yazılsın.

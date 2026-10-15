@@ -237,17 +237,17 @@ class Controller(QObject):
             self.set_status('Kısayol başka uygulamada kullanılıyor. Yuvarlak düğmeye tıklayabilirsin.')
 
     def make_icon(self):
-        icon_path=ROOT/'assets'/'ses.ico'
+        icon_path=ROOT/'assets'/'branding'/'tini.ico'
         if icon_path.exists():
             return QIcon(str(icon_path))
         image = QPixmap(64, 64)
         image.fill(Qt.GlobalColor.transparent)
         painter = QPainter(image)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor('#a6f0cb'))
+        painter.setBrush(QColor('#101c26'))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawRoundedRect(QRectF(2, 2, 60, 60), 18, 18)
-        painter.setPen(QColor('#13291e'))
+        painter.setPen(QColor('#4abacb'))
         painter.setFont(QFont('Segoe UI', 32, QFont.Weight.Bold))
         painter.drawText(image.rect(), Qt.AlignmentFlag.AlignCenter, 't')
         painter.end()
