@@ -1,0 +1,21 @@
+.venv/
+.models/
+__pycache__/
+*.log
+runtime/
+benchmark.json
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local audio, shortcuts and build outputs
+*.wav
+*.mp3
+*.mp4
+*.lnk
+build/
+dist/
