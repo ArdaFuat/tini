@@ -1,6 +1,15 @@
 # Performans incelemesi — 15 Ekim 2026
 
-**Son durum:** Kullanıcı tercihiyle animasyonun çizim uygulaması optimizasyondan
+## Güncel animasyon: daha seyrek geometri
+
+Kullanıcı isteğiyle tel kafes 25×48 yerine 18×34 örnekten oluşturuluyor.
+Çizgi sayısı 3.504 → 1.768 (%49,5 azalma); nokta sayısı 1.200 → 612.
+Renkler, ses kazancı, dalgalanma ve kare hızları aynı kaldı.
+Aynı ekran dışı çizim ölçümünde medyan süre beklerken 1,582 → 0,884 ms,
+konuşurken 5,358 → 2,941 ms oldu (yaklaşık %44–45 daha kısa).
+Bu sonuç yalnızca animasyon çizimine aittir; toplam RAM/GPU tüketimi ölçülmedi.
+
+**Önceki optimizasyonun durumu:** Kullanıcı tercihiyle animasyonun çizim uygulaması optimizasyondan
 önceki sürümüne geri alındı. Aşağıdaki çizim süreleri denenen optimizasyonun
 arşiv ölçümleridir; çizim kazancı artık geçerli sürümün özelliği değildir.
 Hafif başlatıcı, ayarların sonradan oluşturulması, ses tamponlarının bırakılması

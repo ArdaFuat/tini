@@ -43,7 +43,9 @@ class Orb(QWidget):
         self.last_tick = time.monotonic()
         self.last_hit_radius = None
         # A 3D latitude/longitude mesh. Geometry is reused, only deformation changes.
-        rows, columns = 25, 48
+        # About half the previous mesh: 612 vertices / 1768 edges, down from
+        # 1200 / 3504. Preserve the silhouette and audio-driven deformation.
+        rows, columns = 18, 34
         self.theta = np.repeat(np.linspace(.055, math.pi-.055, rows), columns)
         self.phi = np.tile(np.linspace(0, 2*math.pi, columns, endpoint=False), rows)
         self.base = np.column_stack((np.sin(self.theta)*np.cos(self.phi),
