@@ -6,7 +6,7 @@ from pathlib import Path
 # Keep animation speed tied to elapsed time on mixed 60/240 Hz desktops.
 os.environ.setdefault('QSG_USE_SIMPLE_ANIMATION_DRIVER','1')
 
-from PySide6.QtCore import QObject, QSize, QUrl, Qt, Signal
+from PySide6.QtCore import QObject, QSize, QTimer, QUrl, Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtQuick import QQuickView, QQuickWindow, QSGRendererInterface
 from PySide6.QtWidgets import QApplication
@@ -31,6 +31,16 @@ class NativeOrbRenderer(QObject):
         self.view.resize(owner.SIZE, owner.SIZE)
         self.view.setMinimumSize(QSize(owner.SIZE,owner.SIZE))
         self.view.setMaximumSize(QSize(owner.SIZE,owner.SIZE))
+        self._owner = owner
+        # Windows can preserve physical window dimensions on a DPI transition,
+        # despite fixed logical size hints (144 DIP becomes 96 at 150%). Repair
+        # after the native resize event, rather than only before moving screens.
+        self._geometry_timer = QTimer(self)
+        self._geometry_timer.setSingleShot(True)
+        self._geometry_timer.timeout.connect(self.sync_geometry)
+        self.view.widthChanged.connect(self.schedule_geometry)
+        self.view.heightChanged.connect(self.schedule_geometry)
+        self.view.screenChanged.connect(self.schedule_geometry)
         self.move(owner.pos())
         source = Path(__file__).resolve().parent/'assets'/'orb'/'Orb.qml'
         self.view.setSource(QUrl.fromLocalFile(str(source)))
@@ -65,6 +75,16 @@ class NativeOrbRenderer(QObject):
         if screen is not None and self.view.screen() != screen:
             self.view.setScreen(screen)
         self.view.setPosition(point)
+        self.schedule_geometry()
+
+    def schedule_geometry(self, *_):
+        self._geometry_timer.start(0)
+
+    def sync_geometry(self):
+        if self.view.size() != self._owner.size():
+            self.view.resize(self._owner.size())
+        if self.view.position() != self._owner.pos():
+            self.view.setPosition(self._owner.pos())
 
     def show(self, owner):
         self.move(owner.pos())

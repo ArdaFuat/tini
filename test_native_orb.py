@@ -104,11 +104,20 @@ class NativeOrbTests(unittest.TestCase):
         self.assertNotIn(hit(5,5),(owner,render))
 
     def test_monitor_movement_and_visibility_recovery(self):
-        for screen in self.app.screens():
+        self.orb.set_mode('recording')
+        # Test both directions: 100% -> 150% used to crop the right/bottom,
+        # while 150% -> 100% left an oversized render window.
+        for screen in list(self.app.screens())*2:
             self.orb.move(screen.availableGeometry().topLeft()+QPoint(30,30))
-            QTest.qWait(150)
+            QTest.qWait(350)
             self.assertEqual(self.view.position(),self.orb.pos())
             self.assertEqual(self.view.screen(),screen)
+            self.assertEqual(self.view.size(),self.orb.size())
+            frame=pixels(self.view.grabWindow())
+            expected=round(self.orb.SIZE*self.view.devicePixelRatio())
+            self.assertEqual(frame.shape[:2],(expected,expected))
+            self.assertFalse(np.any(frame[[0,-1],:,3]>20))
+            self.assertFalse(np.any(frame[:,[0,-1],3]>20))
         self.orb.hide()
         self.assertFalse(self.view.isVisible())
         self.orb.reveal(True)
