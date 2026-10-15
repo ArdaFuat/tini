@@ -9,17 +9,14 @@ sonra çevrimdışı çalışır; ses kaydetmez, abonelik veya API anahtarı ist
 
 ## Kurulum
 
-**Windows · Python 3.13 · CUDA destekli NVIDIA ekran kartı ve güncel sürücü**
+**Windows x64 · NVIDIA ekran kartı ve güncel sürücü**
 
-Depoyu indir, klasörde PowerShell aç:
+1. [Kurulum paketini indir](https://github.com/ArdaFuat/tini/archive/refs/heads/main.zip) ve ZIP’i kalıcı bir klasöre çıkar.
+2. **Kur.vbs** dosyasına çift tıkla. Python, paketler ve konuşma modeli otomatik hazırlanır.
+3. **Tını aç** düğmesine bas. Sonrasında masaüstündeki **Tını** simgesini kullan.
 
-```powershell
-py -3.13 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-`Baslat.vbs` dosyasına çift tıkla. İlk açılışta yaklaşık **1,6 GB** model indirilir;
-uygulama açıkken model GPU belleğinde hazır tutulur.
+Komut yazman gerekmez. İlk kurulum internet ister ve birkaç dakika sürebilir;
+model yaklaşık **1,6 GB** indirilir. Kurduğun klasörü yerinde tut.
 
 ## Kullanım
 
