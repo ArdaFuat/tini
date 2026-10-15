@@ -49,7 +49,7 @@ orb.set_mode('idle')
 for _ in range(35):
     orb.last_tick=time.monotonic()-.033
     orb.tick()
-assert orb.expansion < .015 and orb.timer.interval()==125
+assert orb.expansion < .015 and orb.timer.interval()==orb.IDLE_INTERVAL
 assert not orb.findChildren(QLabel)
 assert orb.clamp(__import__('PySide6.QtCore',fromlist=['QPoint']).QPoint(99999,99999))==orb.home()
-print('PASS: expansion, speech response, release, idle 8fps, offscreen recovery, no overlay text')
+print('PASS: expansion, speech response, release, idle cadence, offscreen recovery, no overlay text')

@@ -19,6 +19,8 @@ class Orb(QWidget):
     settings = Signal()
     exit_requested = Signal()
     SIZE = 144
+    ACTIVE_INTERVAL = 16
+    IDLE_INTERVAL = 33
 
     def __init__(self, config):
         super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint |
@@ -59,9 +61,11 @@ class Orb(QWidget):
                     edges.append((vertex, vertex+columns))
                     edges.append((vertex, (row+1)*columns+(col+1)%columns))
         self.edges = np.asarray(edges)
+        self.idle_edges = self.edges[::3]
         self.timer = QTimer(self)
+        self.timer.setTimerType(Qt.TimerType.PreciseTimer)
         self.timer.timeout.connect(self.tick)
-        self.timer.start(33)
+        self.timer.start(self.ACTIVE_INTERVAL)
         position = config.value('pill_position', None)
         self.move(self.clamp(position) if isinstance(position, QPoint) else self.home())
         self.set_mode('loading')
@@ -106,7 +110,7 @@ class Orb(QWidget):
                                     'error':'#ef7988'}[mode])
         if mode != 'recording':
             self.target = 0.0
-        self.timer.setInterval(33)
+        self.timer.setInterval(self.ACTIVE_INTERVAL)
         self.last_tick = time.monotonic()
         self.update()
 
@@ -125,8 +129,9 @@ class Orb(QWidget):
         mix = 1-math.exp(-dt/.18)
         self.color = QColor.fromRgbF(*[a+(b-a)*mix for a,b in zip(self.color.getRgbF()[:3],self.color_target.getRgbF()[:3])])
         self.phase += dt*(.24 + self.level*4.0 if self.mode == 'recording' else .18)
-        # Eight frames/sec for the tiny idle orb; 30 while opening or listening.
-        interval = 125 if self.mode == 'idle' and self.expansion < .015 else 33
+        # A rotating idle sphere also needs a smooth cadence. PreciseTimer avoids
+        # coarse Windows timer rounding stretching active frames to about 47 ms.
+        interval = self.IDLE_INTERVAL if self.mode == 'idle' and self.expansion < .015 else self.ACTIVE_INTERVAL
         if self.timer.interval() != interval:
             self.timer.setInterval(interval)
         self.update()
@@ -166,12 +171,18 @@ class Orb(QWidget):
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawEllipse(QRectF(cx-radius*1.2,cy-radius*1.2,radius*2.4,radius*2.4))
         back, front = QPainterPath(), QPainterPath()
-        # A reduced mesh is sufficient when the orb is only 24px across.
-        edges = self.edges if self.expansion > .15 else self.edges[::3]
-        for a,b in edges:
-            path = front if (z[a]+z[b]) > 0 else back
-            path.moveTo(float(projected[a,0]),float(projected[a,1]))
-            path.lineTo(float(projected[b,0]),float(projected[b,1]))
+        # Gather coordinates and depth in NumPy once, rather than indexing and
+        # converting scalar arrays for every edge on the UI thread. Keep exactly
+        # the same subpaths and painter, so the mesh's appearance stays intact.
+        edges = self.edges if self.expansion > .15 else self.idle_edges
+        coordinates = projected[edges].reshape(-1,4)
+        visible = z[edges].sum(axis=1) > 0
+        for path, mask in ((back,~visible),(front,visible)):
+            lines = coordinates[mask].tolist()
+            path.reserve(len(lines)*2)
+            for x1,y1,x2,y2 in lines:
+                path.moveTo(x1,y1)
+                path.lineTo(x2,y2)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         for path,alpha,width in ((back,45,.5),(front,180,.6)):
             color = QColor(self.color)

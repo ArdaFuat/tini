@@ -1,6 +1,22 @@
 # Performans incelemesi — 15 Ekim 2026
 
-## Güncel animasyon: daha seyrek geometri
+## Güncel animasyon: düzenli kare aralığı
+
+Takılma incelemesinde ekran dışı Qt olay döngüsünde bekleme karelerinin medyan
+aralığı 126,34 ms, konuşma karelerinin aralığı 46,85 ms ölçüldü. Bekleme bilinçli
+olarak 8 kare/sn ile sınırlıydı; varsayılan kaba zamanlayıcı da aktif kareleri geciktiriyordu.
+`PreciseTimer` ve beklemede 33 / kullanımda 16 ms hedefiyle medyanlar 33,04 / 16,01 ms
+oldu; yüzde 95 değerleri 34,56 / 16,77 ms. Ölçüm, gerçek mikrofon veya çıkarım
+çalıştırmadan 30 ms aralıklı yapay ses seviyesiyle yapıldı; tam dikte yükü ölçümü değildir.
+
+Çizgi koordinatları ve derinlik ayrımı NumPy ile topluca hazırlanıyor. Aynı tel
+kafes ve QPainter yolları korunuyor: üç durum, dört ses seviyesi ve üç fazdan
+36 kare önceki çizimle piksel piksel aynı. Profilsiz çizim medyanı beklemede
+0,878 → 0,418 ms, konuşurken 2,909 → 1,392 ms oldu. Daha sık kare çizildiğinden bu
+kazanım toplam CPU kullanımının yarıya düştüğü anlamına gelmez. Model, mikrofon
+ve dikte ayarları değişmedi.
+
+## Önceki değişiklik: daha seyrek geometri
 
 Kullanıcı isteğiyle tel kafes 25×48 yerine 18×34 örnekten oluşturuluyor.
 Çizgi sayısı 3.504 → 1.768 (%49,5 azalma); nokta sayısı 1.200 → 612.
