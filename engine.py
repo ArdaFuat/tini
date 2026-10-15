@@ -36,10 +36,15 @@ def load_model(status=lambda message: None):
                          download_root=str(ROOT / '.models'), cpu_threads=4, num_workers=1)
     status('Ekran kartı ısınıyor…')
     import numpy as np
-    # Force the CUDA kernels and libraries to load before the first dictation.
+    # Warm the same beam-search kernels used by real dictation, not just the
+    # silence fast path. Otherwise first-use CUDA loading can stall presentation.
     segments, _ = model.transcribe(np.zeros(16000, dtype=np.float32), language='tr',
-                                   beam_size=1, condition_on_previous_text=False)
+                                   beam_size=3, max_new_tokens=4,
+                                   no_speech_threshold=1.0,
+                                   condition_on_previous_text=False)
     list(segments)
+    from faster_whisper.vad import get_vad_model
+    get_vad_model()
     return model
 
 

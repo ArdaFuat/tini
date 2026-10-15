@@ -1,6 +1,42 @@
 # Performans incelemesi — 15 Ekim 2026
 
-## Güncel animasyon: düzenli kare aralığı
+## Güncel animasyon: ayrı ses süreci ve GPU çizimi
+
+Gerçek konuşma çözümlemesi sürerken eski arayüzde kareler arasında 392 ms'ye
+ulaşan boşluklar görüldü. Ses motoru artık ayrı bir süreçte çalışıyor; kürenin
+sürekli hareketini Qt Quick'in yerel render iş parçacığı ve GPU shader'ları
+üretiyor. Her kare için Python geri çağrısı veya QWidget yeniden çizimi yok.
+GPU çizimi açılamazsa eski raster çizimine dönülüyor.
+
+Büyüme sırasında pencere maskesini tekrar kurmak 138 ms'ye kadar duraklama
+yaratabiliyordu. Bu işlem kaldırıldı; şeffaf pikseller ve ayrı hafif tıklama
+yüzeyi sürükleme/tıklama alanını sağlıyor. Ses motoru kapanışta durduruluyor;
+iptal edilmiş oturumların sonuçları metin alanına gönderilmiyor. İlk gerçek
+çözümlemenin CUDA hazırlığını azaltmak için beam-search ve VAD açılışta ısıtılıyor.
+Konuşmayı çözen `transcribe` işlevinin ayarları değişmedi.
+
+İki ayrı beş dakikalık denemede mevcut yerel ses örnekleri kullanıldı; gerçek
+mikrofon açılmadı, sonuçlar başka uygulamalara yazılmadı. Her koşuda 299/299
+çözümleme tamamlandı; 43 durum geçişi ve beş gizleme/geri getirme çevrimi denendi.
+Son koşuda 69.126 görünür render karesinin medyan aralığı 4 ms, yüzde 99 değeri
+8 ms idi. Sekiz aralık 50 ms'yi aştı; en büyüğü 80 ms idi. Bu değerler ayrıntılı
+Qt günlükleri açıkken alınan render iş parçacığı ölçümleridir; fiziksel ekran
+sunumu ölçümü veya bütün takılmaların ortadan kalktığı garantisi değildir.
+Normal uygulamada bu yoğun kare günlükleri kapalıdır.
+
+GPU açık ve kapalı ek kontrollerde üç ses örneğinin toplam 18 çözümlemesi
+önceki referanslarla birebir aynı metni verdi. 27 otomatik kontrol ile ayrı
+çalıştırılan dört Windows/GPU kontrolü geçti. GPU kontrolleri gerçek piksellerde
+hareket ve büyüme, ses tepkisi, tıklama geçirgenliği, iki monitör arasında taşıma
+ve görünürlüğün geri gelmesini kapsıyor.
+
+Küçük kürede seyrek ızgara korunuyor. Hareketin yalnızca parlaklık değişimi gibi
+görünmemesi için iki eksende dönüş belirginleştirildi; derinlik rengi bütün
+küreye yayıldı ve arka çizgiler görünür tutuldu. Konuşma tepkisinin hızlı
+yükselip yavaş sönmesi korundu. Bu son görsel ayar, yukarıdaki uzun yük
+denemelerinden sonra dört Windows/GPU kontrolüyle yeniden doğrulandı.
+
+## Önceki animasyon: düzenli kare aralığı
 
 Takılma incelemesinde ekran dışı Qt olay döngüsünde bekleme karelerinin medyan
 aralığı 126,34 ms, konuşma karelerinin aralığı 46,85 ms ölçüldü. Bekleme bilinçli

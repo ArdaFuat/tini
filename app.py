@@ -6,7 +6,6 @@ import math
 import os
 import queue
 import sys
-import threading
 import time
 
 import numpy as np
@@ -19,7 +18,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QHBoxLayout,
     QVBoxLayout, QWidget)
 
 from audio_pipeline import RATE, Segmenter
-from engine import ROOT, load_model, transcribe
+from engine import ROOT
 import winbridge as win
 from orb import Orb as Pill
 
@@ -53,42 +52,7 @@ class Events(QObject):
     exit_requested = Signal()
 
 
-class Inference:
-    def __init__(self, events):
-        self.events = events
-        self.jobs = queue.Queue()
-        self.session = 0
-        self.vocabulary = ''
-        self.stopping = False
-        self.ready = False
-        self.thread=threading.Thread(target=self.run, daemon=True)
-        self.thread.start()
-
-    def run(self):
-        try:
-            model = load_model(self.events.status.emit)
-            self.ready = True
-            self.events.ready.emit()
-            while not self.stopping:
-                job = self.jobs.get()
-                if job is None:
-                    break
-                session, index, audio = job
-                if session != self.session:
-                    del audio,job
-                    continue
-                text, elapsed = transcribe(model, audio, final=True, vocabulary=self.vocabulary)
-                if session == self.session:
-                    self.events.result.emit(session, index, True, text, elapsed)
-                # Do not retain the last audio buffer throughout idle periods.
-                del audio,job
-        except Exception as error:
-            logging.exception('Inference failed')
-            self.events.error.emit(f'Model hatası: {error}')
-            self.ready = False
-
-    def submit(self, session, index, audio):
-        self.jobs.put((session, index, audio))
+from inference import Inference
 
 
 from hotkeys import Hotkeys
@@ -476,16 +440,14 @@ class Controller(QObject):
         self.quitting = True
         logging.info('Exit requested; stopping audio and shortcuts')
         self.stop_stream()
-        self.worker.stopping = True
-        self.worker.jobs.put(None)
         self.hotkeys.close()
-        self.pill.timer.stop()
+        self.pill.shutdown_animation()
         self.pill.hide()
         if self.window is not None:
             self.window.hide()
         self.tray.hide()
         self.config.sync()
-        self.worker.thread.join(timeout=1)
+        self.worker.close()
         self.app.quit()
 
 
@@ -522,6 +484,8 @@ def main():
                       'audio_timer_active':controller.timer.isActive(), 'hotkey_ok':controller.hotkeys.ok,
                       'settings_created':controller.window is not None,
                       'pid':os.getpid(), 'exit_hotkey_ok':getattr(controller.hotkeys,'exit_ok',False)}
+            response['animation_backend']='gpu' if controller.pill._renderer is not None else 'raster'
+            response['speech_pid']=getattr(getattr(controller.worker,'process',None),'pid',None)
             connection.write(json.dumps(response).encode('utf-8'))
             connection.flush()
             connection.disconnectFromServer()

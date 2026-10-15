@@ -14,8 +14,7 @@ class LifecycleTests(unittest.TestCase):
         cls.qt=QApplication.instance() or QApplication([])
 
     def setUp(self):
-        self.engine=SimpleNamespace(ready=True,session=0,vocabulary='',stopping=False,
-                                   jobs=queue.Queue(),thread=SimpleNamespace(join=Mock()))
+        self.engine=SimpleNamespace(ready=True,session=0,vocabulary='',close=Mock())
         self.keys=SimpleNamespace(ok=True,arm_cancel=Mock(),close=Mock())
         self.app=SimpleNamespace(quit=Mock())
         with patch('app.Inference',return_value=self.engine), patch('app.Hotkeys',return_value=self.keys):
@@ -44,7 +43,7 @@ class LifecycleTests(unittest.TestCase):
         self.controller.quit()
         self.keys.close.assert_called_once()
         self.app.quit.assert_called_once()
-        self.assertTrue(self.engine.stopping)
+        self.engine.close.assert_called_once()
         self.assertFalse(self.controller.pill.isVisible())
         self.assertFalse(self.controller.window.isVisible())
         self.assertFalse(self.controller.pill.timer.isActive())
@@ -73,6 +72,17 @@ class LifecycleTests(unittest.TestCase):
         self.controller.pill.close()
         self.app.quit.assert_called_once()
         self.assertTrue(self.controller.quitting)
+
+    def test_gpu_failure_restores_visible_raster_animation(self):
+        orb=self.controller.pill
+        renderer=Mock()
+        orb._renderer=renderer
+        orb.timer.stop()
+        orb.use_raster_fallback('test device lost')
+        self.assertIsNone(orb._renderer)
+        self.assertTrue(orb.timer.isActive())
+        renderer.hide.assert_called_once()
+        renderer.view.close.assert_called_once()
 
     def test_clipboard_fallback_does_not_copy_old_large_contents(self):
         import time

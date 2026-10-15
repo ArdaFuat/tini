@@ -18,7 +18,7 @@ def main():
         socket.close()
         return
     root=Path(__file__).resolve().parent
-    subprocess.Popen([str(root/'.venv/Scripts/pythonw.exe'),str(root/'app.py')],cwd=root)
+    subprocess.Popen([str(root/'.venv/Scripts/pythonw.exe'),str(root/'desktop.py')],cwd=root)
 
 
 if __name__=='__main__':

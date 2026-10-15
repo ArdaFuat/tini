@@ -1,7 +1,22 @@
-param([string]$OutputPath='runtime/perf-resources.json', [int]$Seconds=8)
+﻿param([string]$OutputPath='runtime/perf-resources.json', [int]$Seconds=8)
 $ErrorActionPreference='Stop'
-$sesProcesses=@(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'pythonw.exe' -and $_.CommandLine -like '*app.py*' })
-if (-not $sesProcesses.Count) { throw 'Ses is not running' }
+$sesTree=@(Get-CimInstance Win32_Process)
+$sesRoots=@((Join-Path $PSScriptRoot 'desktop.py'),(Join-Path $PSScriptRoot 'app.py'))
+$sesProcesses=@($sesTree | Where-Object {
+ $sesCommand=$_.CommandLine
+ $_.Name -in @('python.exe','pythonw.exe') -and $sesCommand -and ($sesRoots | Where-Object { $sesCommand.IndexOf($_,[StringComparison]::OrdinalIgnoreCase) -ge 0 })
+})
+if (-not $sesProcesses.Count) { throw 'Tını is not running' }
+# Include the speech subprocess and venv redirectors, without counting unrelated Python apps.
+$sesIds=[Collections.Generic.HashSet[int]]::new()
+foreach($sesItem in $sesProcesses) { [void]$sesIds.Add([int]$sesItem.ProcessId) }
+do {
+ $sesAdded=$false
+ foreach($sesItem in $sesTree) {
+  if($sesIds.Contains([int]$sesItem.ParentProcessId) -and $sesIds.Add([int]$sesItem.ProcessId)) { $sesAdded=$true }
+ }
+} while($sesAdded)
+$sesProcesses=@($sesTree | Where-Object { $sesIds.Contains([int]$_.ProcessId) })
 $sesBefore=@{}
 foreach ($sesItem in $sesProcesses) { $sesProc=Get-Process -Id $sesItem.ProcessId; $sesBefore[$sesProc.Id]=$sesProc.CPU }
 $sesClock=[Diagnostics.Stopwatch]::StartNew()

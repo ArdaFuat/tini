@@ -1,10 +1,11 @@
 """A lightweight, audio-reactive wire sphere drawn with Qt's raster painter."""
 import math
 import time
+import logging
 
 import numpy as np
 from PySide6.QtCore import QPoint, QPointF, QRectF, QSettings, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QRadialGradient, QRegion
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QRadialGradient
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 
 
@@ -43,7 +44,7 @@ class Orb(QWidget):
         self.color = QColor('#799ed7')
         self.color_target = QColor(self.color)
         self.last_tick = time.monotonic()
-        self.last_hit_radius = None
+        self._renderer = None
         # A 3D latitude/longitude mesh. Geometry is reused, only deformation changes.
         # About half the previous mesh: 612 vertices / 1768 edges, down from
         # 1200 / 3504. Preserve the silhouette and audio-driven deformation.
@@ -68,6 +69,18 @@ class Orb(QWidget):
         self.timer.start(self.ACTIVE_INTERVAL)
         position = config.value('pill_position', None)
         self.move(self.clamp(position) if isinstance(position, QPoint) else self.home())
+        if QApplication.platformName() != 'offscreen':
+            try:
+                from native_orb import NativeOrbRenderer
+                self._renderer = NativeOrbRenderer(self)
+                self._renderer.failed.connect(self.use_raster_fallback)
+                self.timer.stop()
+            except Exception:
+                logging.exception('Native animation unavailable; using raster fallback')
+        self.level_timeout = QTimer(self)
+        self.level_timeout.setSingleShot(True)
+        self.level_timeout.setInterval(180)
+        self.level_timeout.timeout.connect(self.clear_level)
         self.set_mode('loading')
 
     def home(self):
@@ -83,7 +96,10 @@ class Orb(QWidget):
                       max(area.top(), min(point.y(), area.bottom()-self.height()+1)))
 
     def reveal(self, reset_position=False):
+        needs_show = not self.isVisible() or self.isMinimized() or reset_position
         self.move(self.home() if reset_position else self.clamp(self.pos()))
+        if not needs_show:
+            return
         self.showNormal()
         self.raise_()
         # Keep the orb visible without taking the caret from the target app.
@@ -96,11 +112,36 @@ class Orb(QWidget):
                                         ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
             api.ShowWindow(int(self.winId()), 4)  # SW_SHOWNOACTIVATE
             api.SetWindowPos(int(self.winId()), -1, 0, 0, 0, 0, 0x0013)  # TOPMOST, no activate/move/resize
+        if self._renderer is not None:
+            self._renderer.show(self)
         self.update()
 
     def set_level(self, level):
         self.target = microphone_strength(level)
         self.last_audio = time.monotonic()
+        if self._renderer is not None:
+            self._renderer.set_level(self.target)
+            self.level_timeout.start()
+
+    def clear_level(self):
+        if self._renderer is not None:
+            self._renderer.set_level(0.)
+
+    def use_raster_fallback(self, message):
+        if self._renderer is None:
+            return
+        logging.warning('Switching to raster animation: %s',message)
+        renderer,self._renderer = self._renderer,None
+        renderer.hide()
+        renderer.view.close()
+        renderer.view.deleteLater()
+        renderer.deleteLater()
+        self.level_timeout.stop()
+        self.color = QColor(self.color_target)
+        self.expansion = self.expansion_target
+        self.timer.start(self.ACTIVE_INTERVAL)
+        self.last_tick = time.monotonic()
+        self.update()
 
     def set_mode(self, mode):
         self.mode = mode
@@ -112,6 +153,8 @@ class Orb(QWidget):
             self.target = 0.0
         self.timer.setInterval(self.ACTIVE_INTERVAL)
         self.last_tick = time.monotonic()
+        if self._renderer is not None:
+            self._renderer.set_mode(mode,self.color_target)
         self.update()
 
     def tick(self):
@@ -121,11 +164,10 @@ class Orb(QWidget):
         target = self.target if self.mode == 'recording' and now-self.last_audio < .18 else 0.
         self.level += (target-self.level)*(1-math.exp(-dt/(.045 if target > self.level else .38)))
         self.expansion += (self.expansion_target-self.expansion)*(1-math.exp(-dt/.16))
-        hit_radius = int(24+47*self.expansion)
-        if hit_radius != self.last_hit_radius:
-            self.setMask(QRegion(self.SIZE//2-hit_radius,self.SIZE//2-hit_radius,
-                                 hit_radius*2,hit_radius*2,QRegion.RegionType.Ellipse))
-            self.last_hit_radius = hit_radius
+        # Windows layered windows already hit-test their nonzero-alpha pixels.
+        # The faint disk in draw() fills mesh gaps and grows with the orb.
+        # Rebuilding the native window region here stalls SetWindowRgn/DWM
+        # during expansion, sometimes for more than 100 ms per frame.
         mix = 1-math.exp(-dt/.18)
         self.color = QColor.fromRgbF(*[a+(b-a)*mix for a,b in zip(self.color.getRgbF()[:3],self.color_target.getRgbF()[:3])])
         self.phase += dt*(.24 + self.level*4.0 if self.mode == 'recording' else .18)
@@ -138,6 +180,17 @@ class Orb(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
+        if self._renderer is not None:
+            # Stable, almost transparent input surface. Pixel alpha provides a
+            # circular hit target; the separate GPU window passes all input on.
+            painter.setBrush(QColor(15,25,28,1))
+            painter.setPen(Qt.PenStyle.NoPen)
+            radius = 24 if self.mode == 'idle' else 70
+            painter.drawEllipse(QRectF(72-radius,72-radius,radius*2,radius*2))
+            return
+        self.draw(painter)
+
+    def draw(self, painter):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         cx = cy = self.SIZE/2
         radius = 16 + 39*self.expansion
@@ -195,6 +248,29 @@ class Orb(QWidget):
             self.origin = event.globalPosition().toPoint()-self.pos()
             self.pressed_at = event.globalPosition().toPoint()
             self.dragged = False
+
+    def moveEvent(self,event):
+        if self._renderer is not None:
+            self._renderer.move(self.pos())
+        super().moveEvent(event)
+
+    def showEvent(self,event):
+        super().showEvent(event)
+        if self._renderer is not None:
+            self._renderer.show(self)
+
+    def hideEvent(self,event):
+        if self._renderer is not None:
+            self._renderer.hide()
+        super().hideEvent(event)
+
+    def shutdown_animation(self):
+        self.timer.stop()
+        self.level_timeout.stop()
+        if self._renderer is not None:
+            self._renderer.hide()
+            self._renderer.view.close()
+            self._renderer.view.releaseResources()
 
     def mouseMoveEvent(self, event):
         if self.origin is not None:
