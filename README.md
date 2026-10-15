@@ -4,7 +4,7 @@
 
 Windows için yerel Türkçe dikte. Konuş, metnin seçtiğin alana yazılsın.
 
-![Tını: beklerken küçük turkuaz küre, konuşurken pembe ve yazarken altın animasyon](assets/preview.png)
+![Tını: beklerken küçük, dinlerken turkuaz, konuşurken pembe ve yazarken altın küre](assets/preview.png)
 
 Sesinle hareket eden, sürükleyebildiğin küçük bir küre. İlk model indirmesinden
 sonra çevrimdışı çalışır; ses kaydetmez, abonelik veya API anahtarı istemez.
