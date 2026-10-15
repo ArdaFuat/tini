@@ -99,4 +99,3 @@ class Inference:
         # A canceled queue must never keep Python alive while exiting.
         self.jobs.cancel_join_thread()
         self.jobs.close()
-

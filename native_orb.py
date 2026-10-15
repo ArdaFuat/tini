@@ -76,4 +76,3 @@ class NativeOrbRenderer(QObject):
     def hide(self):
         self.view.hide()
         self.root.setProperty('running',False)
-

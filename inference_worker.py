@@ -38,4 +38,3 @@ def run_worker(jobs, output, current_session):
         except (BrokenPipeError, EOFError, OSError):
             pass
         output.close()
-
