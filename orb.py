@@ -45,6 +45,7 @@ class Orb(QWidget):
         self.color_target = QColor(self.color)
         self.last_tick = time.monotonic()
         self._renderer = None
+        self._topmost = None
         # A 3D latitude/longitude mesh. Geometry is reused, only deformation changes.
         # About half the previous mesh: 612 vertices / 1768 edges, down from
         # 1200 / 3504. Preserve the silhouette and audio-driven deformation.
@@ -81,6 +82,9 @@ class Orb(QWidget):
         self.level_timeout.setSingleShot(True)
         self.level_timeout.setInterval(180)
         self.level_timeout.timeout.connect(self.clear_level)
+        if __import__('sys').platform == 'win32' and QApplication.platformName() != 'offscreen':
+            from topmost import TopmostGuard
+            self._topmost = TopmostGuard(self)
         self.set_mode('loading')
 
     def home(self):
@@ -99,21 +103,15 @@ class Orb(QWidget):
         needs_show = not self.isVisible() or self.isMinimized() or reset_position
         self.move(self.home() if reset_position else self.clamp(self.pos()))
         if not needs_show:
+            if self._topmost is not None:
+                self._topmost.ensure()
             return
         self.showNormal()
         self.raise_()
-        # Keep the orb visible without taking the caret from the target app.
-        if __import__('sys').platform == 'win32' and QApplication.platformName() != 'offscreen':
-            import ctypes
-            from ctypes import wintypes
-            api = ctypes.WinDLL('user32', use_last_error=True)
-            api.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
-            api.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int,
-                                        ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
-            api.ShowWindow(int(self.winId()), 4)  # SW_SHOWNOACTIVATE
-            api.SetWindowPos(int(self.winId()), -1, 0, 0, 0, 0, 0x0013)  # TOPMOST, no activate/move/resize
         if self._renderer is not None:
             self._renderer.show(self)
+        if self._topmost is not None:
+            self._topmost.start()
         self.update()
 
     def set_level(self, level):
@@ -263,13 +261,19 @@ class Orb(QWidget):
         super().showEvent(event)
         if self._renderer is not None:
             self._renderer.show(self)
+        if self._topmost is not None:
+            self._topmost.start()
 
     def hideEvent(self,event):
+        if self._topmost is not None:
+            self._topmost.stop()
         if self._renderer is not None:
             self._renderer.hide()
         super().hideEvent(event)
 
     def shutdown_animation(self):
+        if self._topmost is not None:
+            self._topmost.stop()
         self.timer.stop()
         self.level_timeout.stop()
         if self._renderer is not None:

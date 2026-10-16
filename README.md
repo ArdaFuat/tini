@@ -24,7 +24,7 @@ model yaklaşık **1,6 GB** indirilir. Kurduğun klasörü yerinde tut.
 
 - Yazmak istediğin alana tıkla; **Ctrl + Alt + Boşluk** ile dikteyi başlat / bitir.
 - **Esc:** iptal · **Ctrl + Alt + Q:** çıkış.
-- Küreyi sürükleyerek taşı; sağ tık menüsünden ayarlara ulaş.
+- Küre diğer uygulamaların üzerinde kalır; sürükleyerek taşı, sağ tıkla ayarlara ulaş.
 - Küre kaybolursa `Baslat.vbs` dosyasını tekrar aç.
 
 Konuşma bittiğinde metin hedef alana yapıştırılır. Hedef değişirse panoya kopyalanır.

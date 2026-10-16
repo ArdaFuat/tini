@@ -14,7 +14,7 @@ import numpy as np
 from PySide6.QtCore import QObject, QPoint, QSettings, Qt
 from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWidget
 from orb import Orb
 
 
@@ -123,6 +123,38 @@ class NativeOrbTests(unittest.TestCase):
         self.orb.reveal(True)
         QTest.qWait(100)
         self.assertTrue(self.view.isVisible())
+
+    def test_recovers_above_another_topmost_window_without_taking_focus(self):
+        guard=self.orb._topmost
+        blocker=QWidget(None,Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint |
+                        Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        blocker.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        blocker.setGeometry(self.orb.geometry())
+        guard.stop()
+        try:
+            blocker.show()
+            guard.api.SetWindowPos(int(blocker.winId()),-1,0,0,0,0,0x0013)
+            QTest.qWait(100)
+            self.assertTrue(guard.needs_raise(guard.handles()))
+            guard.api.GetForegroundWindow.restype=W.HWND
+            foreground=guard.api.GetForegroundWindow()
+            guard.timer.start()
+            QTest.qWait(800)
+            self.assertFalse(guard.needs_raise(guard.handles()))
+            self.assertEqual(guard.api.GetForegroundWindow(),foreground)
+            # Losing the native topmost style must also be repaired.
+            for hwnd in reversed(guard.handles()):
+                guard.api.SetWindowPos(hwnd,-2,0,0,0,0,0x0013)
+            self.assertTrue(guard.needs_raise(guard.handles()))
+            QTest.qWait(800)
+            self.assertFalse(guard.needs_raise(guard.handles()))
+            self.assertEqual(guard.api.GetForegroundWindow(),foreground)
+            self.orb.hide()
+            self.assertFalse(guard.timer.isActive())
+            QTest.qWait(650)
+            self.assertFalse(self.view.isVisible())
+        finally:
+            blocker.close()
 
 
 if __name__=='__main__':
